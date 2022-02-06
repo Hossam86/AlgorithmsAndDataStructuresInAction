@@ -3,3 +3,4 @@ Python/.idea
 *-checkpoint.ipynb
 Python/**/tests/data
 **/HuffmanExercise.java
+build
