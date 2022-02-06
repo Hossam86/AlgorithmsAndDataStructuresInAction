@@ -148,9 +148,16 @@ _construct_median_space_split(KdNode *node, uint32_t len, int i)
 
 struct Kdtree
 {
+    std::vector<KdNode> nodes;
     KdNode *root;
     size_t k;
 };
+
+void
+Kdtree_free(Kdtree &self)
+{
+    self.nodes.clear();
+}
 
 Kdtree
 kdtree_build(vec3 *vertices, size_t count, int axis)
@@ -159,15 +166,16 @@ kdtree_build(vec3 *vertices, size_t count, int axis)
         return Kdtree{};
 
     Kdtree self{};
-    self.root = new KdNode{};
     for (size_t i = 0; i < count; ++i)
     {
-        self.root[i].point = vertices[i];
-        self.root[i].left = nullptr;
-        self.root[i].right = nullptr;
+        KdNode *tmp=new KdNode{};
+        tmp->point = vertices[i];
+        tmp->left = nullptr;
+        tmp->right = nullptr;
+        self.nodes.push_back(*tmp);
     }
 
-    self.root = _construct_median_space_split(self.root, count, axis);
+    self.root = _construct_median_space_split(&(self.nodes[0]), count, axis);
     return self;
 }
 
@@ -230,8 +238,8 @@ int main(int argc, char const *argv[])
             auto u = dis(rng) / 100.0f;
             auto v = dis(rng) / 100.0f;
 
-            float theta = 2 * u * M_PI;
-            float phi = 2 * v * M_PI;
+            float theta = 2 * u * 3.14;
+            float phi = 2 * v * 3.14;
 
             float rx = r * sin(phi) * cos(theta);
             float ry = r * sin(phi) * sin(theta);
@@ -242,7 +250,7 @@ int main(int argc, char const *argv[])
     auto query_point = vec3{0.0, 0.0, 0.0};
     auto tree = kdtree_build(&points[0], points.size(), 0);
     float best_dist = std::numeric_limits<float>::max();
-    KdNode *nearest_node = nullptr;
+    KdNode *nearest_node = new KdNode{};
 
     nearest_neighbor(tree.root, query_point, nearest_node, &best_dist);
     std::cout << squared_dist(query_point, nearest_node->point) << std::endl;
