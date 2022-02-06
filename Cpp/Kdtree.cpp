@@ -1,5 +1,6 @@
 #include <iostream>
-
+#include <random>
+#include <vector>
 struct vec3
 {
     float x;
@@ -154,11 +155,11 @@ struct Kdtree
 Kdtree
 kdtree_build(vec3 *vertices, size_t count, int axis)
 {
-    if (vertices = nullptr)
+    if (vertices == nullptr)
         return Kdtree{};
 
     Kdtree self{};
-    self.root = new KdNode[count];
+    self.root = new KdNode{};
     for (size_t i = 0; i < count; ++i)
     {
         self.root[i].point = vertices[i];
@@ -179,20 +180,71 @@ Kdtree_search(Kdtree tree, vec3 p)
 }
 float squared_dist(vec3 p1, vec3 p2)
 {
-    (p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y) + (p2.z - p1.z) * (p2.z - p1.z);
+    return (p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y) + (p2.z - p1.z) * (p2.z - p1.z);
 }
-void nearest_neighbor(KdNode *root, KdNode *target, KdNode *nearest_node, float *best_dist)
+void nearest_neighbor(KdNode *root, const vec3 &target, KdNode *nearest_node, float *best_dist)
 {
     if (root == nullptr)
         return;
-    else 
-     float dist=squared_dist(root->point,target->point)
+    else
+    {
+        float dist = squared_dist(root->point, target);
+        if (dist < *best_dist)
+        {
+            *best_dist = dist;
+            *nearest_node = *root;
+        }
+        KdNode *close_branch;
+        KdNode *far_branch;
+
+        if (compare(target, root, 3) < 0)
+        {
+            close_branch = root->left;
+            far_branch = root->right;
+        }
+        else
+        {
+            close_branch = root->right;
+            far_branch = root->left;
+        }
+
+        nearest_neighbor(close_branch, target, nearest_node, best_dist);
+        if (splitDistance(target, root, 3) < *best_dist)
+            nearest_neighbor(far_branch, target, nearest_node, best_dist);
+    }
 }
-
-
 
 int main(int argc, char const *argv[])
 {
 
+    std::vector<vec3> points;
+    std::mt19937 rng;
+
+    rng.seed(0);
+    for (size_t level = 0; level < 3; ++level)
+    {
+        float r = (level + 1) * 10.0f;
+        for (size_t i = 0; i < 5; i++)
+        {
+            std::uniform_int_distribution<> dis(0, 100);
+            auto u = dis(rng) / 100.0f;
+            auto v = dis(rng) / 100.0f;
+
+            float theta = 2 * u * M_PI;
+            float phi = 2 * v * M_PI;
+
+            float rx = r * sin(phi) * cos(theta);
+            float ry = r * sin(phi) * sin(theta);
+            float rz = r * cos(phi);
+            points.push_back(vec3{rx, ry, rz});
+        }
+    }
+    auto query_point = vec3{0.0, 0.0, 0.0};
+    auto tree = kdtree_build(&points[0], points.size(), 0);
+    float best_dist = std::numeric_limits<float>::max();
+    KdNode *nearest_node = nullptr;
+
+    nearest_neighbor(tree.root, query_point, nearest_node, &best_dist);
+    std::cout << squared_dist(query_point, nearest_node->point) << std::endl;
     return 0;
 }
